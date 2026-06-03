@@ -1,9 +1,15 @@
+export const COMPLETED_THRESHOLD_SECONDS = 10
+
+export function isCallCompleted(r) {
+  return Number(r.callDuration) >= COMPLETED_THRESHOLD_SECONDS
+}
+
 export function getKPIs(data) {
   const total = data.length
   const totalCost = data.reduce((sum, r) => sum + parseFloat(r.callCost || 0), 0)
   const avgDuration = total ? data.reduce((sum, r) => sum + r.callDuration, 0) / total : 0
-  const successful = data.filter(r => r.callStatus === true || r.callStatus === 'true').length
-  const failed = data.filter(r => r.callStatus === false || r.callStatus === 'false').length
+  const successful = data.filter(isCallCompleted).length
+  const failed = total - successful
   return { total, totalCost, avgDuration, successful, failed }
 }
 
