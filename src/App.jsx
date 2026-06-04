@@ -14,10 +14,15 @@ import { Search, Bell, ChevronDown } from 'lucide-react'
 export default function App() {
   const { data, loading, error } = useCallData()
   const { user, logout } = useAuth()
-  const [filters, setFilters] = useState({ search: '', city: '', status: '', direction: '' })
+  const [filters, setFilters] = useState({
+    search: '', city: '', status: '', direction: '', startDate: '', endDate: ''
+  })
 
   const handleFilterChange = (key, value) => {
-    if (key === 'reset') { setFilters({ search: '', city: '', status: '', direction: '' }); return }
+    if (key === 'reset') {
+      setFilters({ search: '', city: '', status: '', direction: '', startDate: '', endDate: '' })
+      return
+    }
     setFilters(prev => ({ ...prev, [key]: value }))
   }
 
@@ -32,10 +37,15 @@ export default function App() {
     const matchDir = !filters.direction
       || (filters.direction === 'inbound'  && (r.callDirection === true  || r.callDirection === 'true'))
       || (filters.direction === 'outbound' && (r.callDirection === false || r.callDirection === 'false'))
-    return matchSearch && matchCity && matchStatus && matchDir
+    const matchStart = !filters.startDate ||
+      new Date(r.callStartTime) >= new Date(filters.startDate)
+    const matchEnd = !filters.endDate ||
+      new Date(r.callStartTime) <= new Date(filters.endDate + 'T23:59:59')
+    return matchSearch && matchCity && matchStatus && matchDir && matchStart && matchEnd
   }), [data, filters])
 
   const initials = user?.name ? user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'U'
+  const hasFilters = filters.city || filters.status || filters.direction || filters.search || filters.startDate || filters.endDate
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -58,7 +68,6 @@ export default function App() {
   const perHour       = getCallsPerHour(filteredData)
   const perDay        = getCallsPerDay(filteredData)
   const byCity        = getCallsByCity(filteredData)
-  const hasFilters    = filters.city || filters.status || filters.direction || filters.search
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
@@ -78,8 +87,7 @@ export default function App() {
 
         <header style={{
           height: 64, display: 'flex', alignItems: 'center', gap: 14, padding: '0 32px',
-          background: '#ffffff',
-          borderBottom: '1px solid #e2e8f0',
+          background: '#ffffff', borderBottom: '1px solid #e2e8f0',
           position: 'sticky', top: 0, zIndex: 20,
         }}>
           <h1 style={{ fontSize: 19, fontWeight: 600, letterSpacing: '-0.02em', color: '#0f172a' }}>CDR Dashboard</h1>
@@ -133,16 +141,17 @@ export default function App() {
 
         <div style={{ flex: 1, padding: '28px 32px 44px', maxWidth: 1600, width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
+          {/* Filter Bar */}
           <div style={{
             display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10,
             background: '#ffffff', border: '1px solid #e2e8f0',
             borderRadius: 10, padding: '12px 16px', boxShadow: '0 1px 2px 0 rgba(15,23,42,0.05)',
           }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
               {[
-                { key: 'city',      label: 'All Cities',      options: cities.map(c => ({ value: c, label: c })) },
-                { key: 'status',    label: 'All Status',      options: [{ value: 'success', label: 'Completed' }, { value: 'failed', label: 'Failed' }] },
-                { key: 'direction', label: 'All Directions',  options: [{ value: 'inbound', label: 'Inbound' }, { value: 'outbound', label: 'Outbound' }] },
+                { key: 'city',      label: 'All Cities',     options: cities.map(c => ({ value: c, label: c })) },
+                { key: 'status',    label: 'All Status',     options: [{ value: 'success', label: 'Completed' }, { value: 'failed', label: 'Failed' }] },
+                { key: 'direction', label: 'All Directions', options: [{ value: 'inbound', label: 'Inbound' }, { value: 'outbound', label: 'Outbound' }] },
               ].map(f => (
                 <select key={f.key} value={filters[f.key]} onChange={e => handleFilterChange(f.key, e.target.value)}
                   style={{
@@ -157,8 +166,35 @@ export default function App() {
                   {f.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               ))}
+
+              {/* Date Range */}
+              <input
+                type="date"
+                value={filters.startDate}
+                onChange={e => handleFilterChange('startDate', e.target.value)}
+                style={{
+                  padding: '7px 10px', borderRadius: 8, fontSize: 13,
+                  background: '#f8fafc', border: '1px solid #e2e8f0',
+                  color: '#334155', outline: 'none', cursor: 'pointer',
+                }}
+              />
+              <span style={{ fontSize: 12, color: '#94a3b8' }}>to</span>
+              <input
+                type="date"
+                value={filters.endDate}
+                onChange={e => handleFilterChange('endDate', e.target.value)}
+                style={{
+                  padding: '7px 10px', borderRadius: 8, fontSize: 13,
+                  background: '#f8fafc', border: '1px solid #e2e8f0',
+                  color: '#334155', outline: 'none', cursor: 'pointer',
+                }}
+              />
+
               {hasFilters && (
-                <button onClick={() => handleFilterChange('reset')} style={{ padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: 'transparent', border: '1px solid #e2e8f0', color: '#64748b', cursor: 'pointer' }}>
+                <button onClick={() => handleFilterChange('reset')} style={{
+                  padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+                  background: 'transparent', border: '1px solid #e2e8f0', color: '#64748b', cursor: 'pointer',
+                }}>
                   Clear
                 </button>
               )}
