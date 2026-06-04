@@ -1,6 +1,6 @@
-import { PhoneCall, Clock, Activity, DollarSign, PhoneOff, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { PhoneCall, Clock, Activity, DollarSign, PhoneOff, ArrowUpRight, ArrowDownRight, Lock } from 'lucide-react'
 
-function Card({ label, value, sub, icon: Icon, tone, delta }) {
+function Card({ label, value, sub, icon: Icon, tone, delta, locked }) {
   const tones = {
     blue:    { bg: '#eff6ff', color: '#2563eb' },
     indigo:  { bg: '#eef2ff', color: '#4f46e5' },
@@ -10,6 +10,20 @@ function Card({ label, value, sub, icon: Icon, tone, delta }) {
   }
   const t = tones[tone] || tones.blue
   const positive = (delta ?? 0) >= 0
+
+  if (locked) {
+    return (
+      <div style={{
+        background: '#f8fafc', borderRadius: 12, padding: '20px 20px 18px',
+        border: '1px solid #e2e8f0', boxShadow: '0 1px 2px 0 rgba(15,23,42,0.05)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 110,
+      }}>
+        <Lock style={{ width: 18, height: 18, color: '#cbd5e1' }} />
+        <p style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500 }}>{label}</p>
+        <p style={{ fontSize: 11, color: '#cbd5e1' }}>Admin only</p>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -49,23 +63,25 @@ function Card({ label, value, sub, icon: Icon, tone, delta }) {
   )
 }
 
-export default function KPICards({ kpis }) {
-  const avgMins    = Math.floor(kpis.avgDuration / 60)
-  const avgSecs    = Math.round(kpis.avgDuration % 60)
+export default function KPICards({ kpis, hideCost = false }) {
+  const avgMins     = Math.floor(kpis.avgDuration / 60)
+  const avgSecs     = Math.round(kpis.avgDuration % 60)
   const successRate = kpis.total ? ((kpis.successful / kpis.total) * 100).toFixed(1) : '0.0'
   const failRate    = kpis.total ? ((kpis.failed    / kpis.total) * 100).toFixed(1) : '0.0'
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 }}>
-      <Card label="Total Calls"  value={kpis.total.toLocaleString()} sub="all records"
+      <Card label="Total Calls" value={kpis.total.toLocaleString()} sub="all records"
             icon={PhoneCall} tone="blue" />
       <Card label="Avg Duration" value={`${avgMins}m ${avgSecs}s`} sub="per call"
             icon={Clock} tone="indigo" />
       <Card label="Success Rate" value={`${successRate}%`}
             delta={parseFloat(successRate) > 90 ? 2 : -2} sub="of total"
             icon={Activity} tone="success" />
-      <Card label="Total Cost"   value={`$${kpis.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-            sub="billed" icon={DollarSign} tone="warning" />
+      <Card label="Total Cost"
+            value={`$${kpis.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            sub="billed" icon={DollarSign} tone="warning"
+            locked={hideCost} />
       <Card label="Failed Calls" value={kpis.failed.toLocaleString()}
             delta={-parseFloat(failRate)} sub="of total"
             icon={PhoneOff} tone="danger" />

@@ -9,11 +9,13 @@ import ActivityTimeline from './components/ActivityTimeline'
 import CityChart from './components/CityChart'
 import CallLogsTable from './components/CallLogsTable'
 import Sidebar from './components/Sidebar'
-import { Search, Bell, ChevronDown } from 'lucide-react'
+import { Search, Bell, ChevronDown, Shield } from 'lucide-react'
 
 export default function App() {
   const { data, loading, error } = useCallData()
   const { user, logout } = useAuth()
+  const isAnalyst = user?.role === 'analyst'
+
   const [filters, setFilters] = useState({
     search: '', city: '', status: '', direction: '', startDate: '', endDate: ''
   })
@@ -104,6 +106,18 @@ export default function App() {
             Live Data
           </span>
 
+          {/* Role badge */}
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 500,
+            background: isAnalyst ? '#f0fdf4' : '#eff6ff',
+            color: isAnalyst ? '#16a34a' : '#2563eb',
+            border: `1px solid ${isAnalyst ? '#bbf7d0' : '#bfdbfe'}`,
+          }}>
+            <Shield style={{ width: 11, height: 11 }} />
+            {isAnalyst ? 'Analyst — View Only' : 'Admin — Full Access'}
+          </span>
+
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ position: 'relative' }}>
               <Search style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: '#94a3b8' }} />
@@ -139,6 +153,19 @@ export default function App() {
           </div>
         </header>
 
+        {/* Analyst notice banner */}
+        {isAnalyst && (
+          <div style={{
+            background: '#fffbeb', borderBottom: '1px solid #fde68a',
+            padding: '10px 32px', display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <Shield style={{ width: 14, height: 14, color: '#d97706' }} />
+            <span style={{ fontSize: 13, color: '#92400e' }}>
+              You are logged in as an <strong>Analyst</strong> — cost data and security features are restricted. Contact an admin for full access.
+            </span>
+          </div>
+        )}
+
         <div style={{ flex: 1, padding: '28px 32px 44px', maxWidth: 1600, width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
           {/* Filter Bar */}
@@ -167,34 +194,22 @@ export default function App() {
                 </select>
               ))}
 
-              {/* Date Range */}
               <input
                 type="date"
                 value={filters.startDate}
                 onChange={e => handleFilterChange('startDate', e.target.value)}
-                style={{
-                  padding: '7px 10px', borderRadius: 8, fontSize: 13,
-                  background: '#f8fafc', border: '1px solid #e2e8f0',
-                  color: '#334155', outline: 'none', cursor: 'pointer',
-                }}
+                style={{ padding: '7px 10px', borderRadius: 8, fontSize: 13, background: '#f8fafc', border: '1px solid #e2e8f0', color: '#334155', outline: 'none', cursor: 'pointer' }}
               />
               <span style={{ fontSize: 12, color: '#94a3b8' }}>to</span>
               <input
                 type="date"
                 value={filters.endDate}
                 onChange={e => handleFilterChange('endDate', e.target.value)}
-                style={{
-                  padding: '7px 10px', borderRadius: 8, fontSize: 13,
-                  background: '#f8fafc', border: '1px solid #e2e8f0',
-                  color: '#334155', outline: 'none', cursor: 'pointer',
-                }}
+                style={{ padding: '7px 10px', borderRadius: 8, fontSize: 13, background: '#f8fafc', border: '1px solid #e2e8f0', color: '#334155', outline: 'none', cursor: 'pointer' }}
               />
 
               {hasFilters && (
-                <button onClick={() => handleFilterChange('reset')} style={{
-                  padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-                  background: 'transparent', border: '1px solid #e2e8f0', color: '#64748b', cursor: 'pointer',
-                }}>
+                <button onClick={() => handleFilterChange('reset')} style={{ padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: 'transparent', border: '1px solid #e2e8f0', color: '#64748b', cursor: 'pointer' }}>
                   Clear
                 </button>
               )}
@@ -204,19 +219,28 @@ export default function App() {
             </span>
           </div>
 
-          <KPICards kpis={kpis} />
+          <KPICards kpis={kpis} hideCost={isAnalyst} />
 
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 18 }}>
             <ActivityTimeline perHour={perHour} perDay={perDay} />
             <CityChart data={byCity} />
           </div>
 
+          {/* Cost chart hidden for analysts */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-            <CostChart data={costByCity} />
+            {!isAnalyst ? (
+              <CostChart data={costByCity} />
+            ) : (
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
+                <Shield style={{ width: 24, height: 24, color: '#94a3b8' }} />
+                <p style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>Cost data restricted</p>
+                <p style={{ fontSize: 12, color: '#94a3b8' }}>Admin access required</p>
+              </div>
+            )}
             <DurationChart stats={durationStats} />
           </div>
 
-          <CallLogsTable data={filteredData} />
+          <CallLogsTable data={filteredData} hideCost={isAnalyst} />
         </div>
       </main>
     </div>
