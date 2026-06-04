@@ -1,30 +1,28 @@
 import { useMemo } from 'react'
 import { useCallData } from './hooks/useCallData'
+import { useAuth } from './AuthContext'
 import Sidebar from './components/Sidebar'
 import { isCallCompleted } from './utils/analytics'
-import { Shield, AlertTriangle, Clock, PhoneOff, TrendingUp } from 'lucide-react'
+import { Shield, AlertTriangle, Clock, PhoneOff, TrendingUp, Lock } from 'lucide-react'
 
 export default function SecurityPage() {
   const { data, loading } = useCallData()
+  const { user } = useAuth()
 
   const analysis = useMemo(() => {
-    // High cost suspicious calls (over $800)
     const highCost = data
       .filter(r => parseFloat(r.callCost) > 800)
       .sort((a, b) => parseFloat(b.callCost) - parseFloat(a.callCost))
 
-    // Very short failed calls (under 10s and failed) - potential spam
     const shortFailed = data
       .filter(r => r.callDuration < 10 && !isCallCompleted(r))
       .sort((a, b) => a.callDuration - b.callDuration)
 
-    // After hours calls (before 8am or after 8pm)
     const afterHours = data.filter(r => {
       const hour = new Date(r.callStartTime).getHours()
       return hour < 8 || hour >= 20
     })
 
-    // High frequency callers (calling more than once)
     const callerFreq = {}
     data.forEach(r => {
       callerFreq[r.callerNumber] = (callerFreq[r.callerNumber] || 0) + 1
@@ -37,14 +35,31 @@ export default function SecurityPage() {
         return { number, count, name: record?.callerName, city: record?.city }
       })
 
-    // Risk score
     const riskScore = Math.min(100, (highCost.length * 10) + (shortFailed.length * 5) + (afterHours.length * 2))
-
     return { highCost, shortFailed, afterHours, highFreq, riskScore }
   }, [data])
 
   const riskColor = analysis.riskScore >= 70 ? '#ef4444' : analysis.riskScore >= 40 ? '#f59e0b' : '#10b981'
   const riskLabel = analysis.riskScore >= 70 ? 'High Risk' : analysis.riskScore >= 40 ? 'Medium Risk' : 'Low Risk'
+
+  // Analyst restriction
+  if (user?.role === 'analyst') {
+    return (
+      <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
+        <Sidebar activePage="Security" />
+        <main style={{ flex: 1, marginLeft: 256, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
+          <div style={{ width: 56, height: 56, borderRadius: 16, background: '#f1f5f9', display: 'grid', placeItems: 'center' }}>
+            <Lock style={{ width: 24, height: 24, color: '#94a3b8' }} />
+          </div>
+          <p style={{ fontSize: 17, fontWeight: 600, color: '#475569' }}>Access Restricted</p>
+          <p style={{ fontSize: 13, color: '#94a3b8' }}>Security features are available to Admin users only.</p>
+          <a href="#/" style={{ marginTop: 8, padding: '8px 20px', borderRadius: 8, background: '#2563eb', color: '#ffffff', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+            Back to Dashboard
+          </a>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
@@ -66,7 +81,6 @@ export default function SecurityPage() {
         ) : (
           <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-            {/* Alert Summary Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
               {[
                 { label: 'High Cost Calls', value: analysis.highCost.length, icon: TrendingUp, color: '#ef4444', bg: '#fff1f2', desc: 'Over $800' },
@@ -87,7 +101,6 @@ export default function SecurityPage() {
               ))}
             </div>
 
-            {/* High Cost Calls */}
             <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 2px rgba(15,23,42,0.05)' }}>
               <div style={{ padding: '18px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 28, height: 28, borderRadius: 7, background: '#fff1f2', display: 'grid', placeItems: 'center' }}>
@@ -126,10 +139,7 @@ export default function SecurityPage() {
               </table>
             </div>
 
-            {/* After Hours + Short Failed */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-
-              {/* After Hours */}
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 2px rgba(15,23,42,0.05)' }}>
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Clock style={{ width: 14, height: 14, color: '#8b5cf6' }} />
@@ -165,7 +175,6 @@ export default function SecurityPage() {
                 </div>
               </div>
 
-              {/* Suspicious Short Calls */}
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 2px rgba(15,23,42,0.05)' }}>
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <PhoneOff style={{ width: 14, height: 14, color: '#f59e0b' }} />
@@ -202,7 +211,6 @@ export default function SecurityPage() {
               </div>
             </div>
 
-            {/* Repeat Callers */}
             {analysis.highFreq.length > 0 && (
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 2px rgba(15,23,42,0.05)' }}>
                 <div style={{ padding: '18px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 10 }}>

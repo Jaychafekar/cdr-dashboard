@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import API_URL from '../config'
+
+const API_URL = 'https://cdr-backend-h492.onrender.com'
 
 let cachedData = null
 let cacheTime = null

@@ -13,25 +13,6 @@ const navRoutes = {
   'Support': '#/support',
 }
 
-const navGroups = [
-  {
-    section: 'Analytics',
-    items: [
-      { icon: LayoutDashboard, label: 'Dashboard' },
-      { icon: FileText, label: 'Call Logs' },
-      { icon: BarChart2, label: 'Reports' },
-    ],
-  },
-  {
-    section: 'Management',
-    items: [
-      { icon: Users, label: 'Customers' },
-      { icon: Server, label: 'Trunks' },
-      { icon: Shield, label: 'Security' },
-    ],
-  },
-]
-
 function NavItem({ item, activePage }) {
   const [hover, setHover] = useState(false)
   const active = item.label === activePage
@@ -54,7 +35,28 @@ function NavItem({ item, activePage }) {
 }
 
 export default function Sidebar({ activePage = 'Dashboard' }) {
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
+  const isAnalyst = user?.role === 'analyst'
+
+  const navGroups = [
+    {
+      section: 'Analytics',
+      items: [
+        { icon: LayoutDashboard, label: 'Dashboard' },
+        { icon: FileText, label: 'Call Logs' },
+        { icon: BarChart2, label: 'Reports' },
+      ],
+    },
+    {
+      section: 'Management',
+      items: [
+        { icon: Users, label: 'Customers' },
+        { icon: Server, label: 'Trunks' },
+        ...(!isAnalyst ? [{ icon: Shield, label: 'Security' }] : []),
+      ],
+    },
+  ]
+
   return (
     <aside style={{
       width: 256, position: 'fixed', left: 0, top: 0, bottom: 0,
